@@ -1,5 +1,5 @@
-# Computer Vision
-opencv-python==4.11.0.86
+# Computer Vision (Contrib version for ChArUco calibration)
+opencv-contrib-python==4.11.0.86
 
 # Core dependencies
 numpy==2.2.6
