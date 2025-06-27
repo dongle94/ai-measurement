@@ -192,3 +192,8 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Project specific - Generated output files
+# ChArUco board images and calibration files
+output/
+scripts/output/
