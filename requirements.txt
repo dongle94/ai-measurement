@@ -1,0 +1,5 @@
+# Computer Vision
+opencv-python==4.11.0.86
+
+# Core dependencies
+numpy==2.2.6
