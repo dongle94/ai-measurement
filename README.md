@@ -47,27 +47,63 @@ python webcam_charuco_calibration.py
 python webcam_charuco_calibration.py 0
 ```
 
+**웹캠 프로필 선택:**
+1. 코덱 선택 (MJPG, YUYV 등)
+2. 해상도 선택 (1920x1080, 1280x720 등)
+3. 프레임레이트 선택 (60fps, 30fps, 15fps 등)
+
 **컨트롤:**
 - `SPACE`: 현재 프레임 캡처
 - `R`: 캡처된 이미지 초기화
 - `C`: 캘리브레이션 수행 (완료 후 실시간 비교 모드로 전환)
 - `Q`: 종료
 
+### 3. 캘리브레이션 결과 뷰어
+```bash
+cd scripts
+python webcam_calibration_view.py 0
+
+# 특정 캘리브레이션 파일 지정
+python webcam_calibration_view.py 0 path/to/calibration.json
+```
+
+**기능:**
+- 저장된 캘리브레이션을 이용한 실시간 왜곡 보정
+- 원본과 보정된 영상을 나란히 비교
+- 캘리브레이션 시 사용된 웹캠 프로필 자동 적용
+
 ## 출력 파일
 
 ### 캘리브레이션 결과
-- `calibration_YYYYMMDD_HHMMSS.json`: 캘리브레이션 데이터
-- `comparison_*.jpg`: 보정 전/후 비교 이미지
-- `frame_*.jpg`: 캡처된 개별 프레임 (동영상 캘리브레이션)
+- `calibration_{camera_index}_{timestamp}.json`: 캘리브레이션 데이터
+- `comparison_{camera_index}_{timestamp}_{index}.jpg`: 보정 전/후 비교 이미지
+- `capture_{camera_index}_{timestamp}_{index}.jpg`: 캡처된 캘리브레이션 이미지
 
 ### JSON 형식
 ```json
 {
-  "timestamp": "20241227_143052",
+  "timestamp": "20250702_143052",
+  "camera_index": "0",
   "camera_matrix": [[fx, 0, cx], [0, fy, cy], [0, 0, 1]],
   "distortion_coefficients": [k1, k2, p1, p2, k3],
   "reprojection_error": 0.234,
-  "image_size": [1920, 1080]
+  "image_size": [1920, 1080],
+  "fps": 60.0,
+  "num_images": 25,
+  "webcam_profile": {
+    "codec": "MJPG",
+    "codec_name": "Motion-JPEG, compressed",
+    "width": 1920,
+    "height": 1080,
+    "fps": 60.0
+  },
+  "codec": "MJPG",
+  "board_info": {
+    "squares_x": 6,
+    "squares_y": 9,
+    "square_length_mm": 30.0,
+    "marker_length_mm": 22.5
+  }
 }
 ```
 
@@ -89,12 +125,17 @@ python webcam_charuco_calibration.py 0
 ```
 ai-measurement/
 ├── scripts/
-│   ├── generate_charuco_board.py      # ChArUco 보드 생성
-│   ├── webcam_charuco_calibration.py  # 웹캠 캘리브레이션
-│   ├── video_charuco_calibration.py   # 동영상 캘리브레이션
-│   └── output/                        # 출력 파일들
-├── requirements.txt                   # 의존성 목록
-└── README.md                         # 프로젝트 설명
+│   ├── generate_charuco_board.py       # ChArUco 보드 생성
+│   ├── webcam_charuco_calibration.py   # 웹캠 캘리브레이션
+│   ├── webcam_calibration_view.py      # 캘리브레이션 결과 뷰어
+│   ├── video_charuco_calibration.py    # 동영상 캘리브레이션
+│   └── ...
+├── output/
+│   ├── charuco_board/                  # 생성된 ChArUco 보드
+│   └── webcam_calibration/             # 웹캠 캘리브레이션 결과
+│       └── camera_{index}/             # 카메라별 결과 폴더
+├── requirements.txt                    # 의존성 목록
+└── README.md                          # 프로젝트 설명
 ```
 
 ## 다음 단계
