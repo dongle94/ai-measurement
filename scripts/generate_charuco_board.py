@@ -20,8 +20,8 @@ def generate_charuco_board():
     
     # ❶ 보드 파라미터 설정
     squares_x, squares_y = 6, 9        # 흰칸(=마커가 들어갈 칸) 개수
-    square_len_mm = 30                 # 흰칸 한 변 길이 [mm]
-    marker_len_mm = 22.5               # 마커 한 변 (흰칸의 75%)
+    square_len_mm = 31                 # 흰칸 한 변 길이 [mm] (실제 측정값)
+    marker_len_mm = 23                 # 마커 한 변 [mm] (실제 측정값)
     
     print(f"ChArUco 보드 파라미터:")
     print(f"  - 격자 크기: {squares_x} x {squares_y}")
@@ -42,8 +42,9 @@ def generate_charuco_board():
     )
     
     # ❹ A4 용지 크기로 이미지 생성
-    # A4(210×297 mm)를 300 DPI로 변환 → 2480×3508 픽셀
-    a4_px = (2480, 3508)               # (width, height)
+    # A4(210×297 mm)를 300 DPI로 변환 시 기준값: 2480×3508 픽셀
+    # 실제 측정값에 맞추기 위해 조정된 크기 사용
+    a4_px = (2400, 3394)               # (width, height)
     
     # 보드 이미지 생성
     # marginSize: 가장자리 여백 (픽셀)
@@ -51,7 +52,10 @@ def generate_charuco_board():
     img = board.generateImage(a4_px, marginSize=60, borderBits=1)
     
     # ❺ 이미지 저장
-    output_dir = "output"
+    # 스크립트 위치와 상관없이 프로젝트 루트의 output 디렉토리 사용
+    script_dir = os.path.dirname(os.path.abspath(__file__))  # 현재 스크립트 디렉토리
+    project_root = os.path.dirname(script_dir)              # 프로젝트 루트 (scripts의 상위)
+    output_dir = os.path.join(project_root, "output", "charuco_board")
     os.makedirs(output_dir, exist_ok=True)
     
     filename = f"charuco_A4_{squares_x}x{squares_y}_{square_len_mm}mm.png"
