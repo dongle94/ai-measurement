@@ -290,6 +290,11 @@ class WebcamCalibration:
     
     def save_calibration_results(self):
         """캘리브레이션 결과를 파일로 저장합니다."""
+        # 카메라에서 현재 FPS 정보 가져오기
+        cap = cv2.VideoCapture(self.camera_index)
+        fps = int(cap.get(cv2.CAP_PROP_FPS)) if cap.isOpened() else 30
+        cap.release()
+        
         # JSON 형태로 저장
         calibration_data = {
             "timestamp": self.session_time,
@@ -298,6 +303,7 @@ class WebcamCalibration:
             "distortion_coefficients": self.dist_coeffs.tolist(),
             "reprojection_error": float(self.calibration_error),
             "image_size": self.image_size,
+            "fps": fps,
             "num_images": len(self.captured_images),
             "board_info": {
                 "squares_x": self.squares_x,
