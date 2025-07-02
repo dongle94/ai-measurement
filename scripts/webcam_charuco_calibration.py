@@ -106,13 +106,17 @@ class WebcamCalibration:
     def __init__(self, camera_index=0):
         # 카메라 설정
         self.camera_index = camera_index
-        
+        self.device_str = str(camera_index)
+        # 캘리브레이션 세션 타임스탬프 (YYYYMMDD_HHMMSS)
+        self.session_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.capture_count = 0  # 캡처 인덱스
+
         # ChArUco 보드 설정 (generate_charuco_board.py와 동일)
         self.squares_x = 6
         self.squares_y = 9
         self.square_length = 0.030  # 30mm in meters
         self.marker_length = 0.0225  # 22.5mm in meters
-        
+
         # ArUco 딕셔너리 및 보드 생성
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         self.board = cv2.aruco.CharucoBoard(
@@ -121,27 +125,27 @@ class WebcamCalibration:
             self.marker_length,
             self.aruco_dict
         )
-        
+
         # CharucoDetector 생성 (OpenCV 4.11+)
         detector_params = cv2.aruco.DetectorParameters()
         charuco_params = cv2.aruco.CharucoParameters()
         self.charuco_detector = cv2.aruco.CharucoDetector(self.board, charuco_params, detector_params)
-        
+
         # 캘리브레이션 데이터
         self.all_charuco_corners = []
         self.all_charuco_ids = []
         self.captured_images = []
         self.image_size = None
-        
+
         # 캘리브레이션 결과
         self.camera_matrix = None
         self.dist_coeffs = None
         self.calibration_error = None
-        
-        # 디렉토리 설정
-        self.output_dir = "output/webcam_calibration"
+
+        # 디렉토리 설정 (카메라별 하위 폴더)
+        self.output_dir = os.path.join("output/webcam_calibration", f"camera_{self.device_str}")
         os.makedirs(self.output_dir, exist_ok=True)
-        
+
         # 상태 표시를 위한 변수들
         self.last_detection_status = "Waiting..."
         self.target_images = 25  # 목표 이미지 수
@@ -209,18 +213,20 @@ class WebcamCalibration:
         """현재 프레임을 캘리브레이션용으로 캡처합니다."""
         if charuco_corners is not None and len(charuco_corners) >= 10:
             # 이미지 저장
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-            image_path = os.path.join(self.output_dir, f"capture_{timestamp}.jpg")
+            idx_str = f"{self.capture_count:03d}"
+            image_name = f"capture_{self.device_str}_{self.session_time}_{idx_str}.jpg"
+            image_path = os.path.join(self.output_dir, image_name)
             cv2.imwrite(image_path, image)
-            
+
             # 캘리브레이션 데이터 저장
             self.captured_images.append(image_path)
             self.all_charuco_corners.append(charuco_corners)
             self.all_charuco_ids.append(charuco_ids)
-            
+
             if self.image_size is None:
                 self.image_size = image.shape[:2][::-1]  # (width, height)
-            
+
+            self.capture_count += 1
             print(f"✅ 이미지 캡처됨: {len(self.captured_images)}/{self.target_images}")
             return True
         else:
@@ -233,13 +239,14 @@ class WebcamCalibration:
         for image_path in self.captured_images:
             if os.path.exists(image_path):
                 os.remove(image_path)
-        
+
         # 데이터 초기화
         self.all_charuco_corners.clear()
         self.all_charuco_ids.clear()
         self.captured_images.clear()
         self.image_size = None
-        
+        self.capture_count = 0
+
         print("🔄 모든 캡처 데이터가 리셋되었습니다.")
     
     def perform_calibration(self):
@@ -283,11 +290,10 @@ class WebcamCalibration:
     
     def save_calibration_results(self):
         """캘리브레이션 결과를 파일로 저장합니다."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
         # JSON 형태로 저장
         calibration_data = {
-            "timestamp": timestamp,
+            "timestamp": self.session_time,
+            "camera_index": self.device_str,
             "camera_matrix": self.camera_matrix.tolist(),
             "distortion_coefficients": self.dist_coeffs.tolist(),
             "reprojection_error": float(self.calibration_error),
@@ -300,11 +306,12 @@ class WebcamCalibration:
                 "marker_length_mm": self.marker_length * 1000
             }
         }
-        
-        json_path = os.path.join(self.output_dir, f"calibration_{timestamp}.json")
+
+        json_name = f"calibration_{self.device_str}_{self.session_time}.json"
+        json_path = os.path.join(self.output_dir, json_name)
         with open(json_path, 'w') as f:
             json.dump(calibration_data, f, indent=2)
-        
+
         print(f"📁 캘리브레이션 결과 저장: {json_path}")
     
     def create_comparison_visualization(self):
@@ -312,31 +319,31 @@ class WebcamCalibration:
         if self.camera_matrix is None:
             print("❌ 캘리브레이션이 완료되지 않았습니다.")
             return
-        
+
         # 최근 캡처된 이미지 몇 개로 비교 이미지 생성
         num_compare = min(4, len(self.captured_images))
-        
+
         for i in range(num_compare):
             image_path = self.captured_images[-(i+1)]  # 최근 이미지부터
             image = cv2.imread(image_path)
-            
+
             if image is not None:
                 # 왜곡 보정
                 undistorted = cv2.undistort(image, self.camera_matrix, self.dist_coeffs)
-                
+
                 # 나란히 배치
                 comparison = np.hstack([image, undistorted])
-                
+
                 # 제목 추가
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 cv2.putText(comparison, "Original", (50, 50), font, 1, (0, 0, 255), 2)
                 cv2.putText(comparison, "Undistorted", (image.shape[1] + 50, 50), font, 1, (0, 255, 0), 2)
-                
+
                 # 저장
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                comp_path = os.path.join(self.output_dir, f"comparison_{timestamp}_{i}.jpg")
+                comp_name = f"comparison_{self.device_str}_{self.session_time}_{i:03d}.jpg"
+                comp_path = os.path.join(self.output_dir, comp_name)
                 cv2.imwrite(comp_path, comparison)
-        
+
         print(f"📸 비교 이미지 {num_compare}개 생성 완료")
     
     def run_realtime_comparison(self, cap):
