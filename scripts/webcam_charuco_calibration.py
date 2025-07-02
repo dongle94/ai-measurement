@@ -17,7 +17,7 @@
 컨트롤:
     SPACE: 현재 프레임 캡처
     R: 캡처된 이미지 모두 삭제하고 다시 시작
-    C: 캘리브레이션 수행
+    C: 캘리브레이션 수행 (완료 후 실시간 비교 모드로 전환)
     Q: 종료
 """
 
@@ -122,8 +122,10 @@ class WebcamCalibration:
             self.aruco_dict
         )
         
-        # CharucoDetector 생성 (OpenCV 4.7+ 새로운 API)
-        self.charuco_detector = cv2.aruco.CharucoDetector(self.board)
+        # CharucoDetector 생성 (OpenCV 4.11+)
+        detector_params = cv2.aruco.DetectorParameters()
+        charuco_params = cv2.aruco.CharucoParameters()
+        self.charuco_detector = cv2.aruco.CharucoDetector(self.board, charuco_params, detector_params)
         
         # 캘리브레이션 데이터
         self.all_charuco_corners = []
@@ -179,7 +181,7 @@ class WebcamCalibration:
             f"Corners: {num_corners}",
             f"Status: {self.get_detection_quality(num_corners)}",
             "",
-            "Controls: [SPACE]Capture [R]Reset [C]Calibrate [Q]Quit"
+            "Controls: [SPACE]Capture [R]Reset [C]Calibrate+Compare [Q]Quit"
         ]
         
         for i, text in enumerate(texts):
@@ -337,6 +339,55 @@ class WebcamCalibration:
         
         print(f"📸 비교 이미지 {num_compare}개 생성 완료")
     
+    def run_realtime_comparison(self, cap):
+        """캘리브레이션 후 실시간 보정 전/후 비교를 실행합니다."""
+        if self.camera_matrix is None:
+            print("❌ 캘리브레이션이 완료되지 않았습니다.")
+            return
+        
+        print("\n🔄 실시간 왜곡 보정 비교 모드")
+        print("   왼쪽: 원본 | 오른쪽: 보정 후")
+        print("   [Q]키를 눌러 종료")
+        
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                print("❌ 프레임을 읽을 수 없습니다.")
+                break
+            
+            # 왜곡 보정 적용
+            undistorted = cv2.undistort(frame, self.camera_matrix, self.dist_coeffs)
+            
+            # 두 이미지를 나란히 배치
+            comparison = np.hstack([frame, undistorted])
+            
+            # 제목과 구분선 추가
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.8
+            thickness = 2
+            
+            # 상단에 제목 추가
+            cv2.putText(comparison, "Original", (50, 40), font, font_scale, (0, 0, 255), thickness)
+            cv2.putText(comparison, "Undistorted", (frame.shape[1] + 50, 40), font, font_scale, (0, 255, 0), thickness)
+            
+            # 중앙에 구분선 추가
+            cv2.line(comparison, (frame.shape[1], 0), (frame.shape[1], comparison.shape[0]), (255, 255, 255), 2)
+            
+            # 하단에 안내 메시지 추가
+            msg_y = comparison.shape[0] - 20
+            cv2.putText(comparison, "Press [Q] to quit", (comparison.shape[1]//2 - 100, msg_y), 
+                       font, 0.6, (255, 255, 255), 2)
+            
+            # 화면 표시
+            cv2.imshow('Calibration Comparison - Before/After', comparison)
+            
+            # 키 입력 처리
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q') or key == ord('Q'):
+                break
+        
+        cv2.destroyWindow('Calibration Comparison - Before/After')
+    
     def run(self):
         """메인 캘리브레이션 루프를 실행합니다."""
         # 웹캠 초기화
@@ -363,11 +414,11 @@ class WebcamCalibration:
         print()
         print("🎯 웹캠 캘리브레이션 시작")
         print("📋 ChArUco 보드를 웹캠 앞에 놓고 다양한 각도로 촬영하세요")
-        print("   컨트롤: [SPACE]캡처 [R]리셋 [C]캘리브레이션 [Q]종료")
+        print("   컨트롤: [SPACE]캡처 [R]리셋 [C]캘리브레이션+실시간비교 [Q]종료")
         
         print("🎥 웹캠 캘리브레이션 시작")
         print("📋 ChArUco 보드를 웹캠 앞에 놓고 다양한 각도로 촬영하세요")
-        print("   컨트롤: [SPACE]캡처 [R]리셋 [C]캘리브레이션 [Q]종료")
+        print("   컨트롤: [SPACE]캡처 [R]리셋 [C]캘리브레이션+실시간비교 [Q]종료")
         
         while True:
             ret, frame = cap.read()
@@ -400,6 +451,8 @@ class WebcamCalibration:
             elif key == ord('c') or key == ord('C'):  # C: 캘리브레이션
                 if self.perform_calibration():
                     self.create_comparison_visualization()
+                    # 캘리브레이션 완료 후 실시간 비교 모드로 전환
+                    self.run_realtime_comparison(cap)
                     
             elif key == ord('q') or key == ord('Q'):  # Q: 종료
                 break
