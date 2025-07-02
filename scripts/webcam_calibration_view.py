@@ -64,19 +64,22 @@ def load_calibration_data(file_path):
         dist_coeffs = np.array(calibration_data['distortion_coefficients'])
         image_size = calibration_data.get('image_size')
         fps = calibration_data.get('fps', 30)  # fps 정보 읽기 (없으면 기본값 30)
+        codec = calibration_data.get('codec')  # 코덱 정보 읽기
         
         print(f"✅ 캘리브레이션 파일을 로드했습니다: {file_path}")
         print(f"📊 재투영 오차: {calibration_data.get('reprojection_error', 'N/A')} 픽셀")
         print(f"📐 이미지 크기: {image_size[0]}x{image_size[1]}")
         print(f"⏱️ 프레임 레이트: {fps} fps")
+        if codec:
+            print(f"🎬 코덱: {codec}")
         
-        return camera_matrix, dist_coeffs, image_size, fps
+        return camera_matrix, dist_coeffs, image_size, fps, codec
     
     except Exception as e:
         print(f"❌ 캘리브레이션 파일 로드 오류: {e}")
-        return None, None, None, None
+        return None, None, None, None, None
 
-def run_undistorted_view(camera_index, camera_matrix, dist_coeffs, image_size=None, fps=30):
+def run_undistorted_view(camera_index, camera_matrix, dist_coeffs, image_size=None, fps=30, codec=None):
     """왜곡 보정된 실시간 웹캠 뷰를 실행합니다."""
     # 웹캠 초기화
     print(f"🎥 카메라 {camera_index} 초기화 중...")
@@ -87,6 +90,21 @@ def run_undistorted_view(camera_index, camera_matrix, dist_coeffs, image_size=No
         print("💡 다른 카메라 인덱스를 시도해보세요.")
         return
     
+    # 코덱 설정 (OpenCV 내장 기능 사용)
+    if codec:
+        try:
+            print(f"🎬 코덱 설정 시도: {codec}")
+            # 4자리 문자열을 FOURCC로 변환
+            if len(codec) == 4:
+                fourcc = cv2.VideoWriter_fourcc(*codec)
+                cap.set(cv2.CAP_PROP_FOURCC, fourcc)
+                print(f"✅ 코덱 설정 성공: {codec}")
+            else:
+                print(f"⚠️ 유효하지 않은 코덱 형식: {codec} (4자리 문자열이어야 함)")
+        except Exception as e:
+            print(f"⚠️ 코덱 설정 중 오류 발생: {e}")
+            print("   코덱 설정을 건너뛰고 계속합니다.")
+
     # 웹캠 해상도 설정 (캘리브레이션 시 사용된 해상도로 설정)
     if image_size:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, image_size[0])
@@ -168,10 +186,10 @@ if __name__ == "__main__":
             sys.exit(1)
     
     # 캘리브레이션 데이터 로드
-    camera_matrix, dist_coeffs, image_size, fps = load_calibration_data(calibration_file)
+    camera_matrix, dist_coeffs, image_size, fps, codec = load_calibration_data(calibration_file)
     if camera_matrix is None or dist_coeffs is None:
         print("❌ 유효한 캘리브레이션 데이터를 로드할 수 없습니다.")
         sys.exit(1)
     
     # 실시간 보정 뷰어 실행
-    run_undistorted_view(camera_index, camera_matrix, dist_coeffs, image_size, fps)
+    run_undistorted_view(camera_index, camera_matrix, dist_coeffs, image_size, fps, codec)
