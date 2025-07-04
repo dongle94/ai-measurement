@@ -20,17 +20,17 @@ ENV:
 #     - cv2.CAP_PROP_EXPOSURE: 50
 
 # Object Detector
-# DET:
-#   MODEL_TYPE: yolov11
-#   DET_MODEL_PATH: './weights/yolov11/yolo11m.pt'
-#   HALF: False
-#   CONF_THRES: 0.5
-#   OBJ_CLASSES: None
-#   YOLO:
-#     IMG_SIZE: 640
-#     NMS_IOU: 0.45
-#     AGNOSTIC_NMS: True
-#     MAX_DET: 100
+DET:
+  MODEL_TYPE: yolov11
+  DET_MODEL_PATH: './weights/yolov11/yolo11m.pt'
+  HALF: False
+  CONF_THRES: 0.5
+  OBJ_CLASSES: None
+  YOLO:
+    IMG_SIZE: 640
+    NMS_IOU: 0.45
+    AGNOSTIC_NMS: True
+    MAX_DET: 100
 
 
 # Object Tracker
