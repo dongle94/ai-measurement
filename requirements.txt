@@ -6,3 +6,6 @@ numpy==2.2.6
 
 # Configuration management
 PyYAML==6.0.2
+
+# YOLO
+-r requirements/yolo.txt

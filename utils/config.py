@@ -40,7 +40,7 @@ class Config:
     def _validate_config(self) -> None:
         """필수 설정 키들을 검증합니다."""
         # 유연한 검증: 필수 섹션이 있는지만 확인
-        required_sections = ['ENV', 'LOG']
+        required_sections = ['ENV', 'LOG', 'DET']
         
         for section in required_sections:
             if section not in self._config_data:
@@ -152,6 +152,44 @@ class Config:
     @property
     def file_log_rotate_interval(self) -> int:
         return self.get('LOG.FILE_LOG_ROTATE_INTERVAL')
+    
+    # DET (Object Detection)
+    @property
+    def det_model_type(self) -> str:
+        return self.get('DET.MODEL_TYPE')
+    
+    @property
+    def det_model_path(self) -> str:
+        return self.get('DET.DET_MODEL_PATH')
+    
+    @property
+    def det_half(self) -> bool:
+        return self.get('DET.HALF', False)
+    
+    @property
+    def det_conf_thres(self) -> float:
+        return self.get('DET.CONF_THRES', 0.5)
+    
+    @property
+    def det_obj_classes(self) -> Optional[list]:
+        return eval(self.get('DET.OBJ_CLASSES', None))
+    
+    # YOLO specific settings
+    @property
+    def yolo_img_size(self) -> int:
+        return self.get('DET.YOLO.IMG_SIZE', 640)
+    
+    @property
+    def yolo_nms_iou(self) -> float:
+        return self.get('DET.YOLO.NMS_IOU', 0.45)
+    
+    @property
+    def yolo_agnostic_nms(self) -> bool:
+        return self.get('DET.YOLO.AGNOSTIC_NMS', True)
+    
+    @property
+    def yolo_max_det(self) -> int:
+        return self.get('DET.YOLO.MAX_DET', 100)
 
 
 # 전역 설정 인스턴스 (기존 코드 호환성)
@@ -190,7 +228,19 @@ if __name__ == '__main__':
         print(f"Logger Name: {config.logger_name}")
         print(f"Log Level: {config.log_level}")
         
-        # 3. 전역 함수 테스트
+        # 3. DET 섹션 값들 확인
+        print(f"\n=== DET 설정 확인 ===")
+        print(f"Model Type: {config.det_model_type}")
+        print(f"Model Path: {config.det_model_path}")
+        print(f"Half Precision: {config.det_half}")
+        print(f"Confidence Threshold: {config.det_conf_thres}")
+        print(f"Object Classes: {config.det_obj_classes}")
+        print(f"YOLO Image Size: {config.yolo_img_size}")
+        print(f"YOLO NMS IOU: {config.yolo_nms_iou}")
+        print(f"YOLO Agnostic NMS: {config.yolo_agnostic_nms}")
+        print(f"YOLO Max Detections: {config.yolo_max_det}")
+        
+        # 4. 전역 함수 테스트
         print("\n=== 전역 함수 테스트 ===")
         set_config('configs/config.yaml')
         global_config = get_config()
@@ -198,6 +248,9 @@ if __name__ == '__main__':
         
         track_model = get_config_value('TRACK.TRACK_MODEL_TYPE', 'default')
         print(f"Track Model Type: {track_model}")
+        
+        det_model = get_config_value('DET.MODEL_TYPE', 'unknown')
+        print(f"Detection Model Type: {det_model}")
         
         print("\n🎉 모든 테스트 성공!")
         

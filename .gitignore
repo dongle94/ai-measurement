@@ -197,3 +197,11 @@ cython_debug/
 # ChArUco board images and calibration files
 output/
 scripts/output/
+
+# Model weights and pretrained files
+weights/
+*.pt
+*.pth
+*.onnx
+*.trt
+*.engine
